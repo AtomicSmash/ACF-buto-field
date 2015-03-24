@@ -1,6 +1,6 @@
 <?php
 
-class acf_field_api_field extends acf_field {
+class acf_field_buto_field extends acf_field {
   
   
   /*
@@ -18,8 +18,8 @@ class acf_field_api_field extends acf_field {
   
   function __construct() {
     // vars
-    $this->name = 'api_field_field';
-    $this->label = __('API Field');
+    $this->name = 'buto_field_field';
+    $this->label = __('Buto API Field');
     $this->category = __("Relational",'acf'); // Basic, Content, Choice, etc
     $this->defaults = array(
       'allow_multiple' => 0,
@@ -56,6 +56,22 @@ class acf_field_api_field extends acf_field {
     *  Please note that you must also have a matching $defaults value for the field name (font_size)
     */
     
+
+
+    acf_render_field_setting( $field, array(
+      'label' => 'Organisation ID',
+      'type'  =>  'text',
+      'name'  =>  'buto_org_id',
+      'required' => true
+    ));
+
+    acf_render_field_setting( $field, array(
+      'label' => 'API key',
+      'type'  =>  'text',
+      'name'  =>  'buto_api_key',
+      'required' => true
+    ));
+        
     acf_render_field_setting( $field, array(
       'label' => 'Allow Null?',
       'type'  =>  'radio',
@@ -66,6 +82,7 @@ class acf_field_api_field extends acf_field {
       ),
       'layout'  =>  'horizontal'
     ));
+    
     acf_render_field_setting( $field, array(
       'label' => 'Allow Multiple?',
       'type'  =>  'radio',
@@ -107,25 +124,41 @@ class acf_field_api_field extends acf_field {
     // vars
     $field = array_merge($this->defaults, $field);
     $choices = array();
-   // $forms = RGFormsModel::get_forms(1);
-    //$forms = array('asdasd','asdasdasd');
-
-	$json_url = "";
-	$json = file_get_contents($json_url);
-	$categories = json_decode($json, TRUE);		
+	
+	
+	$ch = curl_init();
+	
+	$header = array("Content-Type: application/json");
+	
+	curl_setopt($ch, CURLOPT_URL, "https://api.buto.tv/v2/playlist/organisation/".$field['buto_org_id']);
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+	curl_setopt($ch, CURLOPT_HEADER, FALSE);
+	curl_setopt($ch, CURLOPT_USERPWD, $field['buto_api_key'].":x");
+	
+	curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
+	$response = curl_exec($ch);
+		
+	curl_close($ch);
+	
+	$response = json_decode($response, TRUE);
 	
 /*
 	echo "<pre>";
-	print_r($categories);
+	print_r($response);
 	echo "</pre>";
 */
 	
 	
-    if($categories)
+    if($response)
     {
-      foreach( $categories as $categories )
-      {
-        $choices[$categories['category_name']] = ucfirst($categories['category_name']);
+	    
+	  if(array_key_exists('message',$response)){
+	        $choices[1] = $response['message'];
+	  }else{
+	      foreach( $response as $response )
+	      {
+	        $choices[$response['playlist_id']] = $response['title']." (".count($response['videos']).")";
+	      }
       }
     }
 
@@ -188,20 +221,6 @@ class acf_field_api_field extends acf_field {
     }
 
 
-    // load form data
-    if( is_array($value) )
-    {
-      foreach( $value as $k => $v )
-      {
-          $form = RGFormsModel::get_form($v);
-          $value[ $k ] = $form;
-        }
-    }
-    else
-    {
-      $value = RGFormsModel::get_form($value);
-    }
-
 
     // return value
     return $value;
@@ -211,4 +230,4 @@ class acf_field_api_field extends acf_field {
 
 
 // create field
-new acf_field_api_field();
+new acf_field_buto_field();
